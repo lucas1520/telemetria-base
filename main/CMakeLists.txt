@@ -5,6 +5,9 @@ idf_component_register(SRCS "${srcs}"
                         bt
                         nvs_flash
                         esp_driver_uart
+                    REQUIRES
+                        fatfs
+                        sdmmc driver
                     INCLUDE_DIRS
                         "./include"
                     )
