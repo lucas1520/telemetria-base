@@ -33,5 +33,9 @@ void app_main(void) {
         return;
     }
 
-    xTaskCreate(read_serial_task, "uart_task", 4096, NULL, 5, NULL);
+    rc = xTaskCreate(read_serial_task, "uart_task", 4096, NULL, 5, NULL);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "failed to create read serial task");
+        return;
+    }
 }
