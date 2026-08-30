@@ -1,8 +1,11 @@
+#include <stdlib.h>
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 
 #include "serial.h"
+#include "types.h"
+#include "data_boat_queue.h"
 
 #define UART_PORT	   UART_NUM_2
 #define UART_BAUD_RATE 115200
@@ -12,7 +15,10 @@
 
 #define UART_BUFFER_SIZE 1024
 
+static struct data_boat decode_data(char* raw_data);
+
 static const char *TAG = "UART";
+QueueHandle_t data_boat_queue;
 
 void read_serial_task(void *pvParameters) {
 	uart_config_t uart_config = {
@@ -65,13 +71,49 @@ void read_serial_task(void *pvParameters) {
 
 			ESP_LOGI(TAG, "Received: %s", (char *)data);
 
-			printf("RAW: ");
+			// printf("RAW: ");
+			struct data_boat formatted_data_boat = decode_data((char *)data);
 
-			for (int i = 0; i < length; i++) {
-				printf("%02X", data[i]);
-			}
+			xQueueSend(data_boat_queue, &formatted_data_boat, portMAX_DELAY);
 
-			printf("\n");
+			// printf("current %f\n", formatted_data_boat.current_instant);
+			// printf("voltage %f\n", formatted_data_boat.voltage_instant);
+
+			// for (int i = 0; i < length; i++) {
+			// 	printf("%02X", data[i]);
+			// }
+			//
+			// printf("\n");
 		}
 	}
+}
+
+static struct data_boat decode_data(char* raw_data) {
+	char delimiters[] = ",";
+
+	char *token = strtok(raw_data, delimiters);
+
+	struct data_boat data_boat = {
+		.current_instant = 0.0f,
+		.voltage_instant = 0.0f
+	};
+	// TODO: utilizar ponteiro para verificar quando conversao para float deu errado
+	char *endptr;
+
+	if (token == NULL) {
+		ESP_LOGE(TAG, "No voltage received");
+		return data_boat;
+	}
+	data_boat.voltage_instant = strtof(token, &endptr);
+
+	token = strtok(NULL, delimiters);
+
+	if (token == NULL) {
+		ESP_LOGE(TAG, "No current received");
+		return data_boat;
+	}
+
+	data_boat.current_instant = strtof(token, &endptr);
+
+	return data_boat;
 }
