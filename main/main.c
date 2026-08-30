@@ -3,21 +3,12 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "esp_log.h"
-
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
-#include "nvs_flash.h"
-
 #include "serial.h"
-#include "common.h"
-#include "gatt_svc.h"
-#include "telemetry.h"
-#include "gap.h"
 
+#include "common.h"
 #include "sd_card.h"
 #include "ble.h"
 
