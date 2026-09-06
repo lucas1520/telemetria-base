@@ -44,6 +44,13 @@ void init_ble(void) {
         return;
     }
 
+    rc = gap_init();
+    if (rc != 0) {
+        ESP_LOGE(TAG, "failed to initialize GAP, error code: %d", rc);
+        nimble_port_deinit();
+        return;
+    }
+
     /*GATT Server initialization */
     rc = gatt_svc_init();
     if (rc != 0) {

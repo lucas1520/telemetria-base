@@ -71,6 +71,7 @@ static void start_advertising(void) {
         name = DEVICE_NAME;
     }
     adv_fields.name = (uint8_t *)name;
+    ESP_LOGI("ESPNAME", "%s", adv_fields.name);
     adv_fields.name_len = strlen(name);
     adv_fields.name_is_complete = 1;
 #endif
