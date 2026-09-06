@@ -29,6 +29,12 @@ void telemetry_task_calc(void *pvParameters) {
             printf("\t%f\n", data_boat.voltage_instant);
 
             usedEnergy += calculateEnergySlice(data_boat.voltage_instant, data_boat.current_instant);
+            struct data_telemetry data_telemetry = {
+                .data_boat = data_boat,
+                .usedEnergy = usedEnergy
+            };
+            xQueueSend(data_telemetry_queue, &data_telemetry, portMAX_DELAY);
+
             printf("Used energy: %.20f\n", usedEnergy);
         }
     }

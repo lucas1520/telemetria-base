@@ -14,9 +14,12 @@
 #include "types.h"
 #include "data_boat_queue.h"
 
+QueueHandle_t data_telemetry_queue;
+
 void app_main(void) {
     BaseType_t rc = 0;
     data_boat_queue = xQueueCreate(10, sizeof(struct data_boat));
+    data_telemetry_queue = xQueueCreate(10, sizeof(struct data_telemetry));
 
     init_ble();
     init_sd_card();
@@ -36,6 +39,12 @@ void app_main(void) {
     rc = xTaskCreate(telemetry_task_calc, "Telemetry calculator", 4096, NULL, 5, NULL);
     if (rc != pdPASS) {
         ESP_LOGE(TAG, "failed to create telemetry task");
+        return;
+    }
+
+    rc = xTaskCreate(write_telemetry_data, "Write Telemetry Data", 4096, NULL, 5, NULL);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "failed to create write telemetry task");
         return;
     }
 }

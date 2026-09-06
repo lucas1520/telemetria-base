@@ -13,6 +13,7 @@
 #define MOUNT_POINT "/telemetryData"
 
 void init_sd_card(void);
+void write_telemetry_data(void *pvParameters);
 
 #endif
 

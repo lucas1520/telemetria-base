@@ -1,6 +1,11 @@
 #include "esp_err.h"
 #include"sd_card.h"
 
+#include "data_boat_queue.h"
+#include "types.h"
+
+static void dump_buffer();
+
 void init_sd_card(void) {
     esp_err_t ret;
 
@@ -51,10 +56,53 @@ void init_sd_card(void) {
     if (f == NULL) {
         ESP_LOGE("SD", "Failed to open file for writing");
     } else {
-        fprintf(f, "Hello from ESP-IDF!\n");
+        fprintf(f, "Hello from ESRP-IDF!\n");
         fclose(f);
         ESP_LOGI("SD", "File written successfully");
     }
 
-    esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card);
+    // esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card);
+}
+#define BUFFER_MAX_SIZE 1024
+
+char buffer[BUFFER_MAX_SIZE];
+size_t used = 0;
+
+void write_telemetry_data(void *pvParameters) {
+    struct data_telemetry data_telemetry;
+    char line[128];
+    uint8_t count = 0;
+
+    while (1) {
+        if (xQueueReceive(data_telemetry_queue, &data_telemetry, portMAX_DELAY)) {
+            if (BUFFER_MAX_SIZE - used < sizeof(line)) {
+                dump_buffer();
+            }
+
+            snprintf(line, sizeof(line), "%hhu, %f,%f,%f",
+                count++,
+                data_telemetry.data_boat.current_instant,
+                data_telemetry.data_boat.voltage_instant,
+                data_telemetry.usedEnergy);
+
+            int written = snprintf(buffer + used, sizeof(line), "%s\n", line);
+            used += written;
+        }
+    }
+}
+
+static void dump_buffer() {
+    FILE *f = fopen(MOUNT_POINT "/data.txt", "a");
+
+    if (f == NULL) {
+        ESP_LOGE("SD", "Failed to open file for writing");
+        return;
+    }
+
+    fprintf(f, "%s", buffer);
+    fflush(f);
+    fclose(f);
+
+    used = 0;
+    ESP_LOGI("SD", "File written successfully");
 }

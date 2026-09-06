@@ -57,7 +57,7 @@ void read_serial_task(void *pvParameters) {
 	ESP_LOGI(TAG, "UART inicializado");
 
 	uint8_t data[UART_BUFFER_SIZE];
-
+	uint8_t count = 0;
 	while (1) {
 		int length = uart_read_bytes(
 			UART_PORT,
@@ -69,7 +69,7 @@ void read_serial_task(void *pvParameters) {
 		if (length > 0) {
 			data[length] = '\0';
 
-			ESP_LOGI(TAG, "Received: %s", (char *)data);
+			ESP_LOGI(TAG, "%hhu, Received: %s", count++, (char *)data);
 
 			// printf("RAW: ");
 			struct data_boat formatted_data_boat = decode_data((char *)data);
