@@ -3,12 +3,21 @@
 #include <stdint.h>
 #include "telemetry.h"
 #include "gatt_svc.h"
+#include "types.h"
 
-static const ble_uuid16_t telemetry_svc_uuid = BLE_UUID16_INIT(0x180D);
+static const ble_uuid128_t telemetry_svc_uuid = BLE_UUID128_INIT(
+    0x6f, 0x36, 0x9e, 0x45,
+    0x4b, 0xf5, 0x4b, 0x44,
+    0x9a, 0xae, 0x10, 0x7f,
+    0xb0, 0x54, 0x9b, 0x70);
 
-static uint8_t telemetry_chr_val[2] = {0};
+char telemetry_chr_val[64] = {0};
 static uint16_t telemetry_chr_val_handle;
-static const ble_uuid16_t telemetry_chr_uuid = BLE_UUID16_INIT(0x2A37);
+static const ble_uuid128_t telemetry_chr_uuid = BLE_UUID128_INIT(
+    0x6f, 0x36, 0x9e, 0x45,
+    0x4b, 0xf5, 0x4b, 0x44,
+    0x9a, 0xae, 0x10, 0x7f,
+    0xb0, 0x54, 0x9b, 0x71);
 
 static uint16_t telemetry_chr_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static bool telemetry_chr_conn_handle_inited = false;
@@ -54,8 +63,14 @@ static int telemetry_chr_access(uint16_t conn_handle, uint16_t attr_handle,
 
             if (attr_handle == telemetry_chr_val_handle) {
                 // TODO make telemetry mock
-                telemetry_chr_val[1] = get_telemetry();
-                rc = os_mbuf_append(ctxt->om, &telemetry_chr_val, sizeof(telemetry_chr_val));
+                // telemetry_chr_val = get_telemetry_packet();
+                strcpy(telemetry_chr_val, get_telemetry_packet());
+                // rc = os_mbuf_append(ctxt->om, &telemetry_chr_val, sizeof(telemetry_chr_val));
+                rc = os_mbuf_append(
+                    ctxt->om,
+                    telemetry_chr_val,
+                    strlen(telemetry_chr_val)
+                );
                 return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
             }
 

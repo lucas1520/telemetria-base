@@ -8,6 +8,8 @@
 static double calculateEnergySlice(float voltage_instant, float current_instant);
 
 static uint8_t telemetry;
+static struct telemetry_packet telemetry_packet;
+char bufferTeste[64];
 
 double usedEnergy = 0.0; // Wh
 uint64_t before = 0; // milliseconds
@@ -16,8 +18,27 @@ uint8_t get_telemetry(void) {
     return telemetry;
 }
 
+char* get_telemetry_packet(void) {
+    return bufferTeste;
+}
+
 void update_telemetry(void) {
-    telemetry = 60 + (uint8_t)(esp_random() % 21);
+    uint8_t random = 60 + (uint8_t)(esp_random() % 21);
+    uint8_t random1 = 60 + (uint8_t)(esp_random() % 21);
+    uint8_t random2 = 60 + (uint8_t)(esp_random() % 21);
+
+    telemetry_packet.current_instant = random;
+    telemetry_packet.voltage_instant = random1;
+    telemetry_packet.usedEnergy = random2;
+
+    snprintf(
+        bufferTeste,
+        sizeof(bufferTeste),
+        "%.2f,%.2f,%.2f",
+        telemetry_packet.current_instant,
+        telemetry_packet.voltage_instant,
+        telemetry_packet.usedEnergy
+    );
 }
 
 void telemetry_task_calc(void *pvParameters) {

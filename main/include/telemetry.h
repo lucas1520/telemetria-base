@@ -8,5 +8,7 @@
 uint8_t get_telemetry(void);
 void update_telemetry(void);
 void telemetry_task_calc(void *pvParameters);
+char* get_telemetry_packet(void);
+
 
 #endif

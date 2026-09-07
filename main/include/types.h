@@ -11,4 +11,10 @@ struct data_telemetry {
     double usedEnergy;
 };
 
+struct telemetry_packet {
+    float voltage_instant;
+    float current_instant;
+    double usedEnergy;
+};
+
 #endif //TELEMETRIA_BASE_TYPES_H
