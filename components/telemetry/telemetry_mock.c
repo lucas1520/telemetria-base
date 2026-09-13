@@ -12,6 +12,7 @@ char bufferTeste[64];
 
 double usedEnergy = 0.0; // Wh
 uint64_t before = 0; // milliseconds
+double previous_power = 0.0; // W
 
 uint8_t get_telemetry(void) {
     return telemetry;
@@ -63,9 +64,11 @@ void telemetry_task_calc(void *pvParameters) {
 
 static double calculateEnergySlice(float voltage_instant, float current_instant) {
     uint64_t now = esp_timer_get_time() / 1000; // milliseconds
+    double current_power = (double)voltage_instant * current_instant;
 
     if (before == 0) {
         before = now;
+        previous_power = current_power;
         return 0.0;
     }
 
@@ -78,5 +81,9 @@ static double calculateEnergySlice(float voltage_instant, float current_instant)
     printf("Delta: %llu ms\n", delta_time);
     printf("Delta time: %.10f hours\n", delta_hours);
 
-    return voltage_instant * current_instant * delta_hours;
+    // Trapezoidal rule
+    double energy = 0.5 * (previous_power + current_power) * delta_hours;
+    previous_power = current_power;
+
+    return energy;
 }
