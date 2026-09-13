@@ -2,7 +2,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "telemetry.h"
-#include "data_boat_queue.h"
 #include "types.h"
 
 static double calculateEnergySlice(float voltage_instant, float current_instant);
@@ -42,9 +41,10 @@ void update_telemetry(void) {
 }
 
 void telemetry_task_calc(void *pvParameters) {
+    struct telemetry_calc_queues *queues = (struct telemetry_calc_queues *)pvParameters;
     struct data_boat data_boat;
     while (1) {
-        if (xQueueReceive(data_boat_queue, &data_boat, portMAX_DELAY)) {
+        if (xQueueReceive(queues->data_boat_queue, &data_boat, portMAX_DELAY)) {
             printf("Chegou na queue\n");
             printf("\t%f\n", data_boat.current_instant);
             printf("\t%f\n", data_boat.voltage_instant);
@@ -54,7 +54,7 @@ void telemetry_task_calc(void *pvParameters) {
                 .data_boat = data_boat,
                 .usedEnergy = usedEnergy
             };
-            xQueueSend(data_telemetry_queue, &data_telemetry, portMAX_DELAY);
+            xQueueSend(queues->data_telemetry_queue, &data_telemetry, portMAX_DELAY);
 
             printf("Used energy: %.20f\n", usedEnergy);
         }

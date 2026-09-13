@@ -2,10 +2,11 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 #include "serial.h"
 #include "types.h"
-#include "data_boat_queue.h"
 
 #define UART_PORT	   UART_NUM_2
 #define UART_BAUD_RATE 115200
@@ -18,9 +19,10 @@
 static struct data_boat decode_data(char* raw_data);
 
 static const char *TAG = "UART";
-QueueHandle_t data_boat_queue;
 
 void read_serial_task(void *pvParameters) {
+	QueueHandle_t data_boat_queue = (QueueHandle_t)pvParameters;
+
 	uart_config_t uart_config = {
 		.baud_rate	= UART_BAUD_RATE,
 		.data_bits	= UART_DATA_8_BITS,

@@ -1,7 +1,8 @@
 #include "esp_err.h"
 #include"sd_card.h"
 
-#include "data_boat_queue.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "types.h"
 
 static void dump_buffer();
@@ -69,6 +70,7 @@ char buffer[BUFFER_MAX_SIZE];
 size_t used = 0;
 
 void write_telemetry_data(void *pvParameters) {
+    QueueHandle_t data_telemetry_queue = (QueueHandle_t)pvParameters;
     struct data_telemetry data_telemetry;
     char line[128];
     uint8_t count = 0;
