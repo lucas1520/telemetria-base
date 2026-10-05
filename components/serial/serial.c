@@ -1,4 +1,6 @@
+#include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
@@ -96,17 +98,21 @@ static struct data_boat decode_data(char* raw_data) {
 	char *token = strtok(raw_data, delimiters);
 
 	struct data_boat data_boat = {
-		.current_instant = 0.0f,
-		.voltage_instant = 0.0f
+		.current_instant = NAN,
+		.voltage_instant = NAN
 	};
-	// TODO: utilizar ponteiro para verificar quando conversao para float deu errado
 	char *endptr;
 
 	if (token == NULL) {
 		ESP_LOGE(TAG, "No voltage received");
 		return data_boat;
 	}
-	data_boat.voltage_instant = strtof(token, &endptr);
+	float voltage = strtof(token, &endptr);
+	if (endptr == token) {
+		ESP_LOGE(TAG, "Invalid voltage: %s", token);
+	} else {
+		data_boat.voltage_instant = voltage;
+	}
 
 	token = strtok(NULL, delimiters);
 
@@ -115,7 +121,12 @@ static struct data_boat decode_data(char* raw_data) {
 		return data_boat;
 	}
 
-	data_boat.current_instant = strtof(token, &endptr);
+	float current = strtof(token, &endptr);
+	if (endptr == token) {
+		ESP_LOGE(TAG, "Invalid current: %s", token);
+	} else {
+		data_boat.current_instant = current;
+	}
 
 	return data_boat;
 }

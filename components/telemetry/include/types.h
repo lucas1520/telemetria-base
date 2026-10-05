@@ -15,6 +15,8 @@ struct telemetry_packet {
     float voltage_instant;
     float current_instant;
     double usedEnergy;
+    float time_remaining_min;
+    float energy_remaining;
 };
 
 #endif //TELEMETRIA_BASE_TYPES_H

@@ -1,3 +1,5 @@
+#include <math.h>
+#include <stdio.h>
 #include <esp_timer.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -5,9 +7,16 @@
 #include "types.h"
 
 static double calculateEnergySlice(float voltage_instant, float current_instant);
+static void publish_telemetry(const struct data_boat *data_boat, double used_energy);
 
 static uint8_t telemetry;
-static struct telemetry_packet telemetry_packet;
+static struct telemetry_packet telemetry_packet = {
+    .voltage_instant = NAN,
+    .current_instant = NAN,
+    .usedEnergy = 0.0,
+    .time_remaining_min = NAN,
+    .energy_remaining = BATTERY_CAPACITY_WH
+};
 char bufferTeste[64];
 
 double usedEnergy = 0.0; // Wh
@@ -23,22 +32,39 @@ char* get_telemetry_packet(void) {
 }
 
 void update_telemetry(void) {
-    uint8_t random = 60 + (uint8_t)(esp_random() % 21);
-    uint8_t random1 = 60 + (uint8_t)(esp_random() % 21);
-    uint8_t random2 = 60 + (uint8_t)(esp_random() % 21);
+    struct telemetry_packet packet;
 
-    telemetry_packet.current_instant = random;
-    telemetry_packet.voltage_instant = random1;
-    telemetry_packet.usedEnergy = random2;
+    packet = telemetry_packet;
 
     snprintf(
         bufferTeste,
         sizeof(bufferTeste),
-        "%.2f,%.2f,%.2f",
-        telemetry_packet.current_instant,
-        telemetry_packet.voltage_instant,
-        telemetry_packet.usedEnergy
+        "%.2f,%.2f,%.2f,%.0f,%.2f",
+        packet.current_instant,
+        packet.voltage_instant,
+        packet.usedEnergy,
+        packet.time_remaining_min,
+        packet.energy_remaining
     );
+}
+
+static void publish_telemetry(const struct data_boat *data_boat, double used_energy) {
+    double energy_remaining = BATTERY_CAPACITY_WH - used_energy;
+    if (energy_remaining < 0.0) {
+        energy_remaining = 0.0;
+    }
+
+    float time_remaining_min = NAN;
+    double power = (double)data_boat->voltage_instant * data_boat->current_instant;
+    if (!isnan(power) && power > 0.0) {
+        time_remaining_min = (float)(energy_remaining / power * 60.0);
+    }
+
+    telemetry_packet.voltage_instant = data_boat->voltage_instant;
+    telemetry_packet.current_instant = data_boat->current_instant;
+    telemetry_packet.usedEnergy = used_energy;
+    telemetry_packet.time_remaining_min = time_remaining_min;
+    telemetry_packet.energy_remaining = (float)energy_remaining;
 }
 
 void telemetry_task_calc(void *pvParameters) {
@@ -55,6 +81,7 @@ void telemetry_task_calc(void *pvParameters) {
                 .data_boat = data_boat,
                 .usedEnergy = usedEnergy
             };
+            publish_telemetry(&data_boat, usedEnergy);
             xQueueSend(queues->data_telemetry_queue, &data_telemetry, portMAX_DELAY);
 
             printf("Used energy: %.20f\n", usedEnergy);
@@ -63,6 +90,10 @@ void telemetry_task_calc(void *pvParameters) {
 }
 
 static double calculateEnergySlice(float voltage_instant, float current_instant) {
+    if (isnan(voltage_instant) || isnan(current_instant)) {
+        return 0.0;
+    }
+
     uint64_t now = esp_timer_get_time() / 1000; // milliseconds
     double current_power = (double)voltage_instant * current_instant;
 

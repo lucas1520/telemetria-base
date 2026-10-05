@@ -7,6 +7,8 @@
 
 #define TELEMETRY_TASK_PERIOD (1000 / portTICK_PERIOD_MS)
 
+#define BATTERY_CAPACITY_WH 1824.0
+
 struct telemetry_calc_queues {
     QueueHandle_t data_boat_queue;
     QueueHandle_t data_telemetry_queue;
