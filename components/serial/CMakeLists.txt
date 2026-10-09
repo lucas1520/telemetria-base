@@ -4,5 +4,7 @@ idf_component_register(SRCS "serial.c"
                         esp_driver_uart
                         esp_driver_gpio
                         driver
+                        esp_timer
                         telemetry
+                        mavlink
                     )

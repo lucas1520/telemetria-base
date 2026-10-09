@@ -13,10 +13,16 @@
 #include "sd_card.h"
 #include "ble.h"
 #include "telemetry.h"
+#include "telemetry_store.h"
 #include "types.h"
 
 void app_main(void) {
     BaseType_t rc = 0;
+
+    if (!telemetry_store_init()) {
+        ESP_LOGE(TAG, "failed to init telemetry store");
+        return;
+    }
 
     static struct telemetry_calc_queues calc_queues;
 
@@ -34,7 +40,7 @@ void app_main(void) {
         return;
     }
 
-    rc = xTaskCreate(read_serial_task, "uart_task", 4096, data_boat_queue, 5, NULL);
+    rc = xTaskCreate(read_serial_task, "uart_task", 6144, data_boat_queue, 5, NULL);
     if (rc != pdPASS) {
         ESP_LOGE(TAG, "failed to create read serial task");
         return;

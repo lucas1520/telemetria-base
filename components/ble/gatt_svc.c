@@ -2,6 +2,7 @@
 #include "host/ble_uuid.h"
 #include <stdint.h>
 #include "telemetry.h"
+#include "telemetry_store.h"
 #include "gatt_svc.h"
 #include "types.h"
 
@@ -11,7 +12,8 @@ static const ble_uuid128_t telemetry_svc_uuid = BLE_UUID128_INIT(
     0x9a, 0xae, 0x10, 0x7f,
     0xb0, 0x54, 0x9b, 0x70);
 
-char telemetry_chr_val[64] = {0};
+#define TELEMETRY_PAYLOAD_MAX_LEN 64
+
 static uint16_t telemetry_chr_val_handle;
 static const ble_uuid128_t telemetry_chr_uuid = BLE_UUID128_INIT(
     0x6f, 0x36, 0x9e, 0x45,
@@ -62,15 +64,14 @@ static int telemetry_chr_access(uint16_t conn_handle, uint16_t attr_handle,
             }
 
             if (attr_handle == telemetry_chr_val_handle) {
-                // TODO make telemetry mock
-                // telemetry_chr_val = get_telemetry_packet();
-                strcpy(telemetry_chr_val, get_telemetry_packet());
-                // rc = os_mbuf_append(ctxt->om, &telemetry_chr_val, sizeof(telemetry_chr_val));
-                rc = os_mbuf_append(
-                    ctxt->om,
-                    telemetry_chr_val,
-                    strlen(telemetry_chr_val)
-                );
+                char payload[TELEMETRY_PAYLOAD_MAX_LEN];
+                int len = telemetry_store_format(payload, sizeof(payload));
+                if (len < 0 || len >= (int)sizeof(payload)) {
+                    ESP_LOGE(TAG, "telemetry payload does not fit in %d bytes", (int)sizeof(payload));
+                    return BLE_ATT_ERR_INSUFFICIENT_RES;
+                }
+
+                rc = os_mbuf_append(ctxt->om, payload, len);
                 return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
             }
 

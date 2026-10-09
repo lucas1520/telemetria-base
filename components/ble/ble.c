@@ -70,9 +70,6 @@ void telemetry_task(void *param) {
     ESP_LOGI(TAG, "telemetry task has been started!");
 
     while (1) {
-        update_telemetry();
-        ESP_LOGI(TAG, "telemetry task updated to %d", get_telemetry());
-
         send_telemetry_indication();
 
         vTaskDelay(TELEMETRY_TASK_PERIOD);

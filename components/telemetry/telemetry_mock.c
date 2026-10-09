@@ -4,49 +4,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "telemetry.h"
+#include "telemetry_store.h"
 #include "types.h"
 
 static double calculateEnergySlice(float voltage_instant, float current_instant);
 static void publish_telemetry(const struct data_boat *data_boat, double used_energy);
 
-static uint8_t telemetry;
-static struct telemetry_packet telemetry_packet = {
-    .voltage_instant = NAN,
-    .current_instant = NAN,
-    .usedEnergy = 0.0,
-    .time_remaining_min = NAN,
-    .energy_remaining = BATTERY_CAPACITY_WH
-};
-char bufferTeste[64];
-
 double usedEnergy = 0.0; // Wh
 uint64_t before = 0; // milliseconds
 double previous_power = 0.0; // W
-
-uint8_t get_telemetry(void) {
-    return telemetry;
-}
-
-char* get_telemetry_packet(void) {
-    return bufferTeste;
-}
-
-void update_telemetry(void) {
-    struct telemetry_packet packet;
-
-    packet = telemetry_packet;
-
-    snprintf(
-        bufferTeste,
-        sizeof(bufferTeste),
-        "%.2f,%.2f,%.2f,%.0f,%.2f",
-        packet.current_instant,
-        packet.voltage_instant,
-        packet.usedEnergy,
-        packet.time_remaining_min,
-        packet.energy_remaining
-    );
-}
 
 static void publish_telemetry(const struct data_boat *data_boat, double used_energy) {
     double energy_remaining = BATTERY_CAPACITY_WH - used_energy;
@@ -60,11 +26,7 @@ static void publish_telemetry(const struct data_boat *data_boat, double used_ene
         time_remaining_min = (float)(energy_remaining / power * 60.0);
     }
 
-    telemetry_packet.voltage_instant = data_boat->voltage_instant;
-    telemetry_packet.current_instant = data_boat->current_instant;
-    telemetry_packet.usedEnergy = used_energy;
-    telemetry_packet.time_remaining_min = time_remaining_min;
-    telemetry_packet.energy_remaining = (float)energy_remaining;
+    telemetry_store_set_energy(used_energy, time_remaining_min, (float)energy_remaining);
 }
 
 void telemetry_task_calc(void *pvParameters) {
