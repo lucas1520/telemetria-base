@@ -21,6 +21,20 @@ Esse processo pode demorar um pouco.
 . ./export.sh
 ```
 
+# Configuração (menuconfig)
+O firmware usa BLE através da pilha NimBLE, que **não vem habilitada por padrão** no ESP-IDF. Como o `sdkconfig` não é
+versionado (está no `.gitignore`), é necessário ativá-los manualmente em um clone novo:
+
+1. Abra o menu de configuração:
+```
+idf.py menuconfig
+```
+2. Vá em `Component config` → `Bluetooth` e ative a opção `Bluetooth` (`CONFIG_BT_ENABLED`).
+3. Em `Bluetooth` → `Host`, selecione `NimBLE - BLE only` (`CONFIG_BT_NIMBLE_ENABLED`).
+4. Salve (`S`) e saia (`Q`).
+
+Sem isso o projeto não compila (os headers do NimBLE não são encontrados) ou o BLE não funciona.
+
 # Uso
 - Defina o chip alvo (necessário apenas na primeira vez ou ao trocar de placa):
 ```
