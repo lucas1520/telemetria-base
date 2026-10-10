@@ -25,6 +25,7 @@ static const char index_html[] =
     ".card b{font-size:1.6rem}"
     "#link{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.85rem}"
     ".ok{background:#1e7a3c}.off{background:#8a2a2a}"
+    "#reset{margin-top:16px;padding:8px 14px;border:0;border-radius:6px;background:#2b3641;color:#e8edf2}"
     "</style></head><body>"
     "<h1>Fenix Telemetria <span id=\"link\" class=\"off\">sem link</span></h1>"
     "<div class=\"grid\">"
@@ -34,7 +35,7 @@ static const char index_html[] =
     "<div class=\"card\"><span>Energia usada (Wh)</span><b id=\"e\">--</b></div>"
     "<div class=\"card\"><span>Energia restante (Wh)</span><b id=\"r\">--</b></div>"
     "<div class=\"card\"><span>Autonomia (min)</span><b id=\"t\">--</b></div>"
-    "</div><script>"
+    "</div><button id=\"reset\">Bateria carregada (zerar energia usada)</button><script>"
     "const f=(id,x,d)=>document.getElementById(id).textContent=x==null?'--':x.toFixed(d);"
     "async function tick(){try{const r=await fetch('/data');const d=await r.json();"
     "f('v',d.voltage,2);f('i',d.current,2);"
@@ -43,15 +44,26 @@ static const char index_html[] =
     "const l=document.getElementById('link');"
     "l.textContent=d.link_ok?'link ok':'sem link';l.className=d.link_ok?'ok':'off';"
     "}catch(e){}}"
+    "document.getElementById('reset').onclick=async()=>{"
+    "if(confirm('Zerar a energia usada? Use somente com a bateria 100% carregada.')){"
+    "await fetch('/reset',{method:'POST'});tick();}};"
     "tick();setInterval(tick,1000);"
     "</script></body></html>";
 
-static int append_field(char *buf, size_t len, const char *name, double value, bool last) {
-    if (isnan(value)) {
-        return snprintf(buf, len, "\"%s\":null%s", name, last ? "" : ",");
+// Acrescenta "nome":valor, em buf. JSON nao tem NaN/inf: valor desconhecido vira null.
+// Retorna false se nao couber (nada e escrito alem do limite).
+static bool append_field(char *buf, size_t size, size_t *used, const char *name, double value) {
+    size_t room = size - *used;
+    int n = isfinite(value)
+        ? snprintf(buf + *used, room, "\"%s\":%.2f,", name, value)
+        : snprintf(buf + *used, room, "\"%s\":null,", name);
+
+    if (n < 0 || (size_t)n >= room) {
+        return false;
     }
 
-    return snprintf(buf, len, "\"%s\":%.2f%s", name, value, last ? "" : ",");
+    *used += (size_t)n;
+    return true;
 }
 
 static esp_err_t index_get_handler(httpd_req_t *req) {
@@ -67,16 +79,32 @@ static esp_err_t data_get_handler(httpd_req_t *req) {
     telemetry_store_get(&state);
 
     buf[used++] = '{';
-    used += append_field(buf + used, sizeof(buf) - used, "voltage", state.voltage_instant, false);
-    used += append_field(buf + used, sizeof(buf) - used, "current", state.current_instant, false);
-    used += append_field(buf + used, sizeof(buf) - used, "used_energy", state.used_energy, false);
-    used += append_field(buf + used, sizeof(buf) - used, "time_remaining_min", state.time_remaining_min, false);
-    used += append_field(buf + used, sizeof(buf) - used, "energy_remaining", state.energy_remaining, false);
-    used += snprintf(buf + used, sizeof(buf) - used, "\"link_ok\":%s}", state.link_ok ? "true" : "false");
+    bool fits = append_field(buf, sizeof(buf), &used, "voltage", state.voltage_instant)
+        && append_field(buf, sizeof(buf), &used, "current", state.current_instant)
+        && append_field(buf, sizeof(buf), &used, "used_energy", state.used_energy)
+        && append_field(buf, sizeof(buf), &used, "time_remaining_min", state.time_remaining_min)
+        && append_field(buf, sizeof(buf), &used, "energy_remaining", state.energy_remaining);
+
+    if (fits) {
+        int n = snprintf(buf + used, sizeof(buf) - used, "\"link_ok\":%s}", state.link_ok ? "true" : "false");
+        fits = n > 0 && (size_t)n < sizeof(buf) - used;
+        used += fits ? (size_t)n : 0;
+    }
+
+    if (!fits) {
+        return httpd_resp_send_500(req);
+    }
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
     return httpd_resp_send(req, buf, used);
+}
+
+static esp_err_t reset_post_handler(httpd_req_t *req) {
+    telemetry_store_request_energy_reset();
+    ESP_LOGI(TAG, "energy reset requested from web page");
+    httpd_resp_set_status(req, "204 No Content");
+    return httpd_resp_send(req, NULL, 0);
 }
 
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data) {
@@ -104,6 +132,9 @@ static esp_err_t start_http_server(void) {
     const httpd_uri_t data_uri = {.uri = "/data", .method = HTTP_GET, .handler = data_get_handler};
     httpd_register_uri_handler(server, &index_uri);
     httpd_register_uri_handler(server, &data_uri);
+
+    const httpd_uri_t reset_uri = {.uri = "/reset", .method = HTTP_POST, .handler = reset_post_handler};
+    httpd_register_uri_handler(server, &reset_uri);
 
     return ESP_OK;
 }

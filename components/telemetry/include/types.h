@@ -2,10 +2,12 @@
 #define TELEMETRIA_BASE_TYPES_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 struct data_boat {
     float voltage_instant;
     float current_instant;
+    int8_t battery_remaining_pct;   // %, -1 = desconhecido
 };
 
 struct data_telemetry {

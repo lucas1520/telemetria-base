@@ -13,6 +13,11 @@ bool telemetry_store_init(void);
 
 void telemetry_store_update_battery(float voltage, float current);
 void telemetry_store_update_heartbeat(void);
+
+// Pedido para zerar a energia usada (bateria recem-carregada), feito pela pagina Wi-Fi.
+// A task de calculo consome o pedido na proxima amostra.
+void telemetry_store_request_energy_reset(void);
+bool telemetry_store_take_energy_reset(void);
 void telemetry_store_set_energy(double used_energy, float time_remaining_min, float energy_remaining);
 
 // Copia atomica do estado atual; link_ok e calculado no momento da leitura.

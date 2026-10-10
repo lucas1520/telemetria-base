@@ -4,5 +4,5 @@ idf_component_register(SRCS "sd_card.c"
                         fatfs
                         sdmmc
                         driver
-                    PRIV_REQUIRES telemetry
+                    PRIV_REQUIRES telemetry esp_timer
                     )

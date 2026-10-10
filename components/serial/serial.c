@@ -154,9 +154,24 @@ static void handle_battery_status(const mavlink_message_t *msg, QueueHandle_t da
 		return;
 	}
 
+	// Com mais de uma bateria, usa so o id da primeira amostra valida (nao mistura V/I de packs diferentes).
+	static int latched_battery_id = -1;
+	static bool other_id_logged = false;
+	if (latched_battery_id < 0) {
+		latched_battery_id = battery.id;
+		ESP_LOGI(TAG, "usando BATTERY_STATUS id=%d", latched_battery_id);
+	} else if (battery.id != latched_battery_id) {
+		if (!other_id_logged) {
+			other_id_logged = true;
+			ESP_LOGW(TAG, "BATTERY_STATUS id=%d ignorado (usando id=%d)", battery.id, latched_battery_id);
+		}
+		return;
+	}
+
 	struct data_boat sample = {
 		.voltage_instant = voltage,
-		.current_instant = battery.current_battery / 100.0f
+		.current_instant = battery.current_battery / 100.0f,
+		.battery_remaining_pct = battery.battery_remaining
 	};
 
 	telemetry_store_update_battery(sample.voltage_instant, sample.current_instant);
@@ -167,13 +182,14 @@ static void handle_battery_status(const mavlink_message_t *msg, QueueHandle_t da
 }
 
 // Tensao do pack = soma das celulas validas (mV -> V).
-// Celulas 1-10: UINT16_MAX = nao usada. Celulas 11-14 (voltages_ext): 0 = nao usada.
+// Celulas 1-10: UINT16_MAX = nao usada (0 tambem e ignorado: celula de 0 mV nao existe).
+// Celulas 11-14 (voltages_ext): 0 = nao usada.
 static bool battery_voltage_v(const mavlink_battery_status_t *battery, float *voltage) {
 	uint32_t total_mv = 0;
 	bool valid = false;
 
 	for (int i = 0; i < 10; i++) {
-		if (battery->voltages[i] != UINT16_MAX) {
+		if (battery->voltages[i] != UINT16_MAX && battery->voltages[i] != 0) {
 			total_mv += battery->voltages[i];
 			valid = true;
 		}
@@ -186,7 +202,7 @@ static bool battery_voltage_v(const mavlink_battery_status_t *battery, float *vo
 		}
 	}
 
-	if (!valid) {
+	if (!valid || total_mv == 0) {
 		return false;
 	}
 

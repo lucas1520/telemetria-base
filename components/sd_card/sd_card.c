@@ -1,4 +1,7 @@
+#include <string.h>
+
 #include "esp_err.h"
+#include "esp_timer.h"
 #include"sd_card.h"
 
 #include "freertos/FreeRTOS.h"
@@ -73,22 +76,31 @@ void write_telemetry_data(void *pvParameters) {
     QueueHandle_t data_telemetry_queue = (QueueHandle_t)pvParameters;
     struct data_telemetry data_telemetry;
     char line[128];
-    uint8_t count = 0;
+    uint32_t count = 0;
 
     while (1) {
         if (xQueueReceive(data_telemetry_queue, &data_telemetry, portMAX_DELAY)) {
-            if (BUFFER_MAX_SIZE - used < sizeof(line)) {
-                dump_buffer();
-            }
-
-            snprintf(line, sizeof(line), "%hhu, %f,%f,%f",
-                count++,
+            // contador, corrente, tensao, energia usada (Wh), ms desde o boot
+            int written = snprintf(line, sizeof(line), "%lu, %f,%f,%f,%lld\n",
+                (unsigned long)count++,
                 data_telemetry.data_boat.current_instant,
                 data_telemetry.data_boat.voltage_instant,
-                data_telemetry.usedEnergy);
+                data_telemetry.usedEnergy,
+                (long long)(esp_timer_get_time() / 1000));
 
-            int written = snprintf(buffer + used, sizeof(line), "%s\n", line);
-            used += written;
+            if (written < 0 || (size_t)written >= sizeof(line)) {
+                continue;
+            }
+
+            if (used + (size_t)written > BUFFER_MAX_SIZE) {
+                dump_buffer();
+                if (used + (size_t)written > BUFFER_MAX_SIZE) {
+                    used = 0;   // flush falhou: descarta o buffer em vez de estourar
+                }
+            }
+
+            memcpy(buffer + used, line, (size_t)written);
+            used += (size_t)written;
         }
     }
 }
@@ -98,10 +110,11 @@ static void dump_buffer() {
 
     if (f == NULL) {
         ESP_LOGE("SD", "Failed to open file for writing");
+        used = 0;   // sem cartao: descarta para o buffer nao crescer alem do limite
         return;
     }
 
-    fprintf(f, "%s", buffer);
+    fwrite(buffer, 1, used, f);
     fflush(f);
     fclose(f);
 
