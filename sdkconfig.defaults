@@ -1,0 +1,14 @@
+# Opcoes que o firmware exige. O sdkconfig e gerado a partir daqui na primeira compilacao
+# (o sdkconfig em si nao e versionado). Se ja existir um sdkconfig, apague-o e rode
+# `idf.py reconfigure` para reaplicar estes valores.
+
+# BLE (NimBLE, servidor GATT)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# Wi-Fi + BLE geram um binario de ~1,2 MB: nao cabe na particao padrao de 1 MB (sem OTA)
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# Com Wi-Fi + BLE a IRAM estoura (iram0_0_seg overflowed); custa so um pouco de desempenho do Wi-Fi
+# CONFIG_ESP_WIFI_IRAM_OPT is not set
+# CONFIG_ESP_WIFI_RX_IRAM_OPT is not set
