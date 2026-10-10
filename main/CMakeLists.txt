@@ -4,6 +4,7 @@ idf_component_register(SRCS "main.c"
                         sd_card
                         serial
                         telemetry
+                        wifi_ap
                         esp_driver_uart
                         esp_driver_gpio
                     )

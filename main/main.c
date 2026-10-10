@@ -15,6 +15,7 @@
 #include "telemetry.h"
 #include "telemetry_store.h"
 #include "types.h"
+#include "wifi_ap.h"
 
 void app_main(void) {
     BaseType_t rc = 0;
@@ -32,6 +33,7 @@ void app_main(void) {
     calc_queues.data_telemetry_queue = data_telemetry_queue;
 
     init_ble();
+    init_wifi_ap();
     init_sd_card();
 
     rc = xTaskCreate(telemetry_task, "Telemetry ", 4 * 1024, NULL, 5, NULL);

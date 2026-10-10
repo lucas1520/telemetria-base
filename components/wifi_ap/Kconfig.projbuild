@@ -1,0 +1,25 @@
+menu "Wi-Fi AP (telemetria)"
+
+    config WIFI_AP_SSID
+        string "SSID do ponto de acesso"
+        default "Fenix Telemetria"
+        help
+            Nome da rede criada pelo ESP32.
+
+    config WIFI_AP_PASSWORD
+        string "Senha WPA2 do ponto de acesso"
+        default "hurakancomputacao"
+        help
+            Minimo 8 caracteres (exigencia do WPA2-PSK).
+
+    config WIFI_AP_CHANNEL
+        int "Canal Wi-Fi"
+        range 1 13
+        default 1
+
+    config WIFI_AP_MAX_CONN
+        int "Maximo de clientes simultaneos"
+        range 1 4
+        default 4
+
+endmenu
